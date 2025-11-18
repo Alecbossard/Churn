@@ -1,0 +1,66 @@
+# -----------------------
+# Python
+# -----------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.dylib
+*.egg
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+
+# -----------------------
+# Virtual environments
+# -----------------------
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+
+# -----------------------
+# Jupyter / IPython
+# -----------------------
+.ipynb_checkpoints/
+.profile_default/
+.ipython/
+
+# -----------------------
+# IDE / Editors
+# -----------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# -----------------------
+# OS files
+# -----------------------
+.DS_Store
+.DS_Store?
+Thumbs.db
+desktop.ini
+
+# -----------------------
+# Logs / temp
+# -----------------------
+logs/
+*.log
+tmp/
+temp/
+
+# -----------------------
+# Project-specific
+# -----------------------
+
+# Intermediate data (can be regenerated)
+data/interim/
+data/processed/
+
+# If one day you génère des notebooks dans reports/
+reports/*.ipynb
