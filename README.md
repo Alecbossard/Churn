@@ -1,215 +1,283 @@
-# Path Planning Studio
+# Churn Prediction Platform
 
-Interactive 3D platform for prototyping and evaluating autonomous racing path-planning algorithms before their integration into the **ROS 2 / Gazebo Formula Student stack**.
+End-to-end machine learning project for **customer churn prediction**, combining data preprocessing, model comparison, business-oriented analysis and an interactive Streamlit dashboard.
 
-Developed in the context of **TLSe Racing**, the platform provides a fast way to test racing-line generation, trajectory optimisation and vehicle behaviour on cone-defined tracks without requiring the full ROS 2 simulation environment.
+The project uses the public **Telco Customer Churn** dataset and was structured as a small production-style ML workflow, from raw data to model evaluation and customer-level scoring.
 
-## Highlights
+## Key Results
 
-- Interactive cone-based track editor
-- Real-time 3D visualisation with multiple camera modes
-- RRT*, QP, Laplacian and hybrid trajectory optimisation
-- Local planning mode for short-horizon experiments
-- Vehicle simulation with velocity, acceleration and braking
-- Ghost-car comparison
-- Live G-G diagram and telemetry
-- Online deployment on Google Cloud Run
-
-## Live Demo
-
-**Online version:**  
-https://path-planning-475644098248.us-west1.run.app/
-
-The web application can be used directly in the browser without any local installation.
+- **Best ROC AUC:** ~0.84
+- **Best churn recall:** ~0.78
+- **Models compared:** Logistic Regression, Random Forest, XGBoost, PyTorch MLP
+- **Final selected model:** Tuned Random Forest
+- **Dataset size:** 7,043 customers
+- **Interactive dashboard:** Streamlit
+- **Business insight:** churn is highest among short-tenure and month-to-month customers
 
 ---
 
-## Demo
+## Project Overview
 
-### RRT* + QP Racing Line
+The platform covers the full ML lifecycle:
 
-![RRT* + QP racing line](docs/demo-rrtqp.gif)
+- data cleaning and preprocessing,
+- feature engineering,
+- stratified train/validation/test splits,
+- classical ML and deep learning models,
+- hyperparameter tuning,
+- ROC-based model comparison,
+- feature-importance analysis,
+- customer segmentation,
+- interactive customer churn scoring.
 
-### Platform Overview
-
-![Path Planning Studio – site overview](docs/demo-site.gif)
-
----
-
-## Motivation
-
-Before integrating path-planning algorithms into the full ROS 2 / Gazebo Formula Student environment, I wanted a lightweight tool for quickly visualising and comparing different trajectory-generation strategies.
-
-Path Planning Studio was therefore developed as a rapid prototyping environment to:
-
-- import or edit cone-defined racing tracks,
-- generate an initial centerline,
-- test multiple racing-line optimisation approaches,
-- compare trajectories visually,
-- simulate vehicle motion,
-- analyse curvature, velocity and lateral/longitudinal acceleration.
-
-The selected approaches could then be transferred and evaluated in the TLSe Racing ROS 2 simulation stack.
+The goal is not only to predict churn, but also to understand **which customer profiles are most at risk and why**.
 
 ---
 
-## Features
+## Dataset
 
-### Cone-Based Track Editor
+The project uses the public **Telco Customer Churn** dataset.
 
-- Import tracks from CSV files containing blue, yellow and orange cones.
-- Support for start/finish and vehicle-start cones.
-- Interactive track editing.
-- Automatic centerline generation from track boundaries.
-- Dynamic track-width handling.
+Each row represents one customer and includes:
 
-### 3D Visualisation
+- demographics,
+- contract information,
+- billing and payment details,
+- subscribed services,
+- tenure,
+- monthly and total charges,
+- churn label.
 
-Built with `@react-three/fiber` and `three.js`.
-
-Available views include:
-
-- Orbit camera
-- Chase camera
-- Cockpit camera
-- Helicopter camera
-
-The environment also includes:
-
-- day/night visualisation,
-- cone meshes,
-- vehicle model,
-- trajectory overlays,
-- track boundaries.
-
-### Trajectory Generation
-
-The platform converts the cone-defined circuit into a dense path representation containing:
-
-- position,
-- curvature,
-- arc length,
-- track-width information.
-
-The trajectory is automatically recomputed when the track geometry is modified.
-
-### Racing-Line Optimisation
-
-The optimisation methods are implemented in `services/mathUtils.ts`.
-
-Available approaches include:
-
-| Method | Description |
-|---|---|
-| **Laplacian** | Smooths the centerline using Laplacian filtering |
-| **RRT*** | Searches for shorter valid shortcuts within the track boundaries |
-| **QP** | Minimum-curvature optimisation using biharmonic smoothing |
-| **Hybrid** | Combines QP and Laplacian smoothing |
-| **RRT* + QP** | Uses RRT* for shortcut generation followed by QP smoothing |
-| **Local** | Short-horizon planner operating around the current vehicle position |
-
-These methods allow quick visual comparison between trajectory smoothness, length and curvature.
+The global churn rate is approximately **26.5%**.
 
 ---
 
-## Vehicle Simulation & Telemetry
+## Machine Learning Pipeline
 
-The platform includes a lightweight vehicle simulation to evaluate the generated trajectories.
+### 1. Data Preparation
 
-### Vehicle Behaviour
+The preprocessing pipeline:
 
-- Trajectory following
-- Longitudinal velocity model
-- Acceleration and braking
-- Curvature-dependent behaviour
+- cleans column types,
+- handles missing values,
+- removes duplicates,
+- converts `TotalCharges` to numeric,
+- creates the binary `ChurnFlag` target,
+- creates stratified train / validation / test splits.
 
-### Ghost Comparison
+Dataset split:
 
-A ghost vehicle can be enabled to compare the current trajectory with a precomputed reference trajectory.
+| Split | Samples |
+|---|---:|
+| Train | 4,225 |
+| Validation | 1,409 |
+| Test | 1,409 |
 
-### Telemetry
+Numeric features are standardized with `StandardScaler`, while categorical features are encoded using `OneHotEncoder`.
 
-The interface provides:
+---
 
-- vehicle velocity,
-- longitudinal acceleration,
-- lateral acceleration,
-- g-force evolution,
-- live G-G diagram,
-- trajectory visualisation.
+### 2. Models
 
-Charts are rendered using **Recharts**.
+The following models were trained and compared:
+
+#### Logistic Regression
+
+A balanced linear baseline using:
+
+```text
+class_weight = balanced
+max_iter = 1000
+```
+
+#### Random Forest
+
+A baseline Random Forest followed by hyperparameter tuning with `RandomizedSearchCV`.
+
+Parameters explored include:
+
+- number of estimators,
+- maximum tree depth,
+- minimum samples per split,
+- minimum samples per leaf,
+- maximum number of features.
+
+#### XGBoost
+
+Gradient-boosted decision trees used as a strong non-linear baseline.
+
+#### PyTorch MLP
+
+A feed-forward neural network with:
+
+- two hidden layers,
+- ReLU activations,
+- dropout,
+- `BCEWithLogitsLoss`,
+- class-imbalance weighting,
+- Adam optimizer.
+
+---
+
+## Model Performance
+
+Approximate test-set performance:
+
+| Model | Accuracy | Precision | Recall | F1 | ROC AUC |
+|---|---:|---:|---:|---:|---:|
+| Logistic Regression | 0.7395 | 0.5060 | **0.7834** | 0.6149 | **0.8426** |
+| Random Forest baseline | 0.7821 | 0.6143 | 0.4813 | 0.5397 | 0.8195 |
+| Random Forest tuned | 0.7580 | 0.5311 | 0.7540 | **0.6232** | **0.8421** |
+| XGBoost baseline | **0.7921** | **0.6302** | 0.5241 | 0.5723 | 0.8225 |
+
+The tuned Random Forest was selected as the final model because it provides a strong balance between:
+
+- ROC AUC,
+- recall on churners,
+- overall accuracy,
+- interpretability.
+
+---
+
+## Business Insights
+
+### Contract Type
+
+| Contract | Churn rate |
+|---|---:|
+| Month-to-month | ~42.7% |
+| One year | ~11.3% |
+| Two year | ~2.8% |
+
+Customers on month-to-month contracts churn much more frequently than customers with long-term contracts.
+
+### Tenure
+
+| Tenure | Churn rate |
+|---|---:|
+| 0–6 months | ~52.9% |
+| 6–20 months | ~33.4% |
+| 20–40 months | ~22.4% |
+| 40–60 months | ~15.6% |
+| 60–72 months | ~6.6% |
+
+The first months of the customer lifecycle are the most critical for retention.
+
+### Total Charges
+
+Customers with lower total charges are significantly more likely to churn, which is strongly related to shorter tenure and weaker long-term engagement.
+
+---
+
+## Feature Importance
+
+The most influential features for the tuned Random Forest include:
+
+- `Contract_Month-to-month`
+- `tenure`
+- `TotalCharges`
+- `Contract_Two year`
+- `MonthlyCharges`
+- `OnlineSecurity_No`
+- `TechSupport_No`
+- `InternetService_Fiber optic`
+- `PaymentMethod_Electronic check`
+
+These features are consistent with the churn-segmentation analysis and help explain which customer profiles are most at risk.
+
+### Random Forest Feature Importance
+
+![Random Forest feature importance](reports/figures/feature_importances_rf_tuned.png)
+
+### XGBoost Feature Importance
+
+![XGBoost feature importance](reports/figures/feature_importances_xgb_baseline.png)
+
+---
+
+## Streamlit Dashboard
+
+The project includes an interactive **Streamlit dashboard** for exploring both global churn patterns and individual customer predictions.
+
+### Overview
+
+- global churn KPI,
+- customer count,
+- churn by contract type,
+- tenure distribution.
+
+### Segments
+
+Interactive churn analysis by:
+
+- contract type,
+- tenure group,
+- total charges.
+
+### Customer Scoring
+
+The dashboard allows the user to:
+
+- select a customer,
+- inspect their profile,
+- compute churn probability,
+- adjust the decision threshold,
+- compare the predicted label with the true label.
 
 ---
 
 ## Tech Stack
 
-### Frontend
+### Machine Learning
 
-- React
-- TypeScript
-- Vite
+- Python
+- Scikit-learn
+- XGBoost
+- PyTorch
+- Pandas
+- NumPy
 
-### 3D
+### Data & Evaluation
 
-- Three.js
-- React Three Fiber
-- React Three Drei
+- Stratified train / validation / test splitting
+- Feature engineering
+- Hyperparameter tuning
+- ROC AUC
+- Confusion matrices
+- Feature importance analysis
 
-### Visualisation
+### Application
 
-- Recharts
-
-### Algorithms
-
-- RRT*
-- Quadratic Programming
-- Laplacian smoothing
-- Minimum-curvature optimisation
-- Local path planning
-
-### Deployment
-
-- Google Cloud Run
+- Streamlit
+- Joblib
 
 ---
 
 ## Project Structure
 
 ```text
-Path-Planning-Studio/
-├── App.tsx
-├── index.tsx
-├── constants.ts
-├── types.ts
-├── components/
-│   ├── AlgorithmsPage.tsx
-│   ├── Car.tsx
-│   ├── LandingPage.tsx
-│   ├── Scene3D.tsx
-│   ├── SimulationsPage.tsx
-│   ├── TrackObjects.tsx
-│   ├── UIOverlay.tsx
-│   └── WorldEnvironment.tsx
-├── services/
-│   └── mathUtils.ts
-├── docs/
-│   ├── demo-rrtqp.gif
-│   └── demo-site.gif
-├── package.json
-├── tsconfig.json
-└── vite.config.ts
+Churn/
+├── data/
+│   ├── raw/
+│   ├── interim/
+│   └── processed/
+├── models/
+├── reports/
+│   ├── figures/
+│   └── feature_importances/
+├── dashboards/
+│   └── streamlit_app/
+├── src/
+│   └── churn_platform/
+│       ├── data/
+│       ├── features/
+│       ├── models/
+│       ├── analysis/
+│       ├── visualization/
+│       └── cli/
+├── requirements.txt
+└── README.md
 ```
-
-### Main Components
-
-- `Scene3D.tsx` — 3D environment, track, vehicle and trajectories
-- `Car.tsx` — vehicle model and motion
-- `TrackObjects.tsx` — cone and track geometry
-- `UIOverlay.tsx` — telemetry, controls and HUD
-- `AlgorithmsPage.tsx` — explanation and selection of optimisation methods
-- `SimulationsPage.tsx` — simulation scenarios
-- `mathUtils.ts` — centerline generation and trajectory-optimisation algorithms
 
 ---
 
@@ -217,65 +285,107 @@ Path-Planning-Studio/
 
 ### Prerequisites
 
-- Node.js 20+
-- npm
+- Python 3.9+
+- pip
 
 ### Installation
 
 ```bash
-git clone https://github.com/Alecbossard/Path-Planning-Studio.git
-cd Path-Planning-Studio
-npm install
+git clone https://github.com/Alecbossard/Churn.git
+cd Churn
+
+python -m venv .venv
 ```
 
-### Run Locally
+Activate the environment:
 
 ```bash
-npm run dev
+# Linux / macOS
+source .venv/bin/activate
+
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
 ```
 
-Vite will start the development server, typically at:
+Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+---
+
+## Running the Pipeline
+
+Add `src/` to `PYTHONPATH`:
+
+```bash
+# Linux / macOS
+export PYTHONPATH="$PWD/src"
+
+# Windows PowerShell
+$env:PYTHONPATH = "$PWD\src"
+```
+
+### Preprocessing
+
+```bash
+python -m churn_platform.cli.run_preprocess
+```
+
+### Train Models
+
+```bash
+python -m churn_platform.cli.run_training
+python -m churn_platform.cli.run_training_rf
+python -m churn_platform.cli.run_training_xgb
+python -m churn_platform.cli.run_training_dl
+```
+
+### Tune Random Forest
+
+```bash
+python -m churn_platform.cli.run_tuning_rf
+```
+
+### Run Analysis
+
+```bash
+python -m churn_platform.cli.run_analysis
+```
+
+### Evaluate Models
+
+```bash
+python -m churn_platform.cli.run_evaluation
+```
+
+---
+
+## Running the Dashboard
+
+```bash
+streamlit run dashboards/streamlit_app/app.py
+```
+
+The dashboard will typically be available at:
 
 ```text
-http://localhost:5173
-```
-
-### Build
-
-```bash
-npm run build
+http://localhost:8501
 ```
 
 ---
 
-## Typical Workflow
+## Possible Extensions
 
-1. Open the online platform or run it locally.
-2. Select or import a cone-based track.
-3. Modify the circuit if needed.
-4. Generate the centerline.
-5. Select a trajectory optimiser.
-6. Compare the generated racing lines.
-7. Launch the vehicle simulation.
-8. Analyse:
-   - trajectory geometry,
-   - velocity,
-   - curvature,
-   - lateral and longitudinal acceleration,
-   - G-G diagram.
-9. Use the results to select approaches for further testing in the ROS 2 / Gazebo Formula Student environment.
+Potential improvements include:
 
----
-
-## Context
-
-This project was developed as part of my work on autonomous path planning with **TLSe Racing**.
-
-The web platform was used as an intermediate experimentation layer before moving selected algorithms into the ROS 2 Formula Student simulation environment.
-
-Related topics:
-
-`Autonomous Driving` · `Path Planning` · `Motion Planning` · `Trajectory Optimisation` · `Formula Student` · `ROS 2`
+- SHAP-based interpretability,
+- calibrated churn probabilities,
+- segment-specific decision thresholds,
+- model experiment tracking,
+- automated tests,
+- deployment of the scoring pipeline as an API.
 
 ---
 
